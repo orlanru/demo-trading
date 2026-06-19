@@ -1,0 +1,37 @@
+# Modelos entrenados (binarios pesados, no se versionan)
+models/*.pkl
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# NLTK data descargada en runtime
+nltk_data/
+
+# Logs y bases de datos locales
+*.log
+*.db
+*.sqlite
+
+# Variables de entorno
+.env
+.env.local
+
+# Notebooks checkpoints
+.ipynb_checkpoints/
+
+# Claude Code local settings
+.claude/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
