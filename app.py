@@ -6,8 +6,12 @@ from services.models import load_brain
 from services.features import get_features_complete
 from services.macro_data import get_fred_data
 from services.news_sentiment import ensure_nltk, get_finviz_data_robust, get_keywords
-from services.market_data import get_intraday_price
-from charts.plotly_charts import predictor_chart, fred_line, sentiment_price_chart, keywords_bar
+from services.market_data import get_intraday_price, get_daily_history
+from services.backtest import run_all, metrics_table
+from charts.plotly_charts import (
+    predictor_chart, fred_line, sentiment_price_chart, keywords_bar,
+    backtest_equity_chart, backtest_drawdown_chart,
+)
 
 
 warnings.filterwarnings("ignore")
@@ -41,7 +45,12 @@ st.markdown("""
 st.title("QUANTITATIVE ASSET TERMINAL")
 st.markdown(f"**INSTITUTIONAL GRADE ANALYTICS** | `{APP_VERSION}` | 🟢 SYSTEM OPERATIONAL")
 
-tab1, tab2, tab3 = st.tabs(["📉 ALGORITHMIC PREDICTOR", "🏦 MACRO LIQUIDITY MONITOR", "📰 SENTIMENT & NLP ENGINE"])
+tab1, tab2, tab3, tab4 = st.tabs([
+    "📉 ALGORITHMIC PREDICTOR",
+    "🏦 MACRO LIQUIDITY MONITOR",
+    "📰 SENTIMENT & NLP ENGINE",
+    "🧪 STRATEGY BACKTEST",
+])
 
 # =========================
 # TAB 1: PREDICTOR
@@ -222,3 +231,90 @@ with tab3:
 
                 with st.expander("VIEW RAW NEWS FEED"):
                     st.dataframe(df_news[["datetime", "headline", "sentiment"]], use_container_width=True)
+
+# =========================
+# TAB 4: STRATEGY BACKTEST
+# =========================
+with tab4:
+    st.markdown("### CAPITAL ALLOCATION BACKTEST — ¿BATIMOS AL DCA?")
+    st.caption(
+        "Mismo dinero aportado cada mes para TODAS las estrategias. Lo único que "
+        "cambia es cuánto se despliega y cuándo. La estrella es **Smart-DCA**: "
+        "compra más en las caídas (mean-reversion) y guarda 'dry powder' cerca de "
+        "máximos. Sin look-ahead: la decisión del mes usa señales del mes anterior."
+    )
+
+    c1, c2, c3, c4 = st.columns([1.4, 1, 1, 1])
+    with c1:
+        bt_ticker = st.text_input("TICKER", "SPY").upper().strip()
+    with c2:
+        bt_start = st.text_input("START DATE", "2005-01-01")
+    with c3:
+        bt_budget = st.number_input("MONTHLY $", min_value=10.0, value=100.0, step=10.0)
+    with c4:
+        bt_fee = st.number_input("FEE (bps)", min_value=0.0, value=5.0, step=1.0)
+
+    with st.expander("ADVANCED PARAMETERS"):
+        a1, a2, a3 = st.columns(3)
+        with a1:
+            rf = st.number_input("Cash yield %/yr (dry powder)", min_value=0.0, value=2.0, step=0.5) / 100.0
+        with a2:
+            smart_hi = st.slider("Smart-DCA max multiplier", 1.5, 5.0, 3.0, 0.5)
+        with a3:
+            limit_k = st.slider("Limit drop k (× vol)", 0.5, 3.0, 1.0, 0.5)
+
+    if st.button("RUN BACKTEST", key="btn_bt") and bt_ticker:
+        with st.spinner(f"Downloading {bt_ticker} & running strategies..."):
+            try:
+                daily = get_daily_history(bt_ticker, start_date=bt_start)
+                if daily is None or daily.empty or "Close" not in daily.columns:
+                    st.error(f"No market data for '{bt_ticker}'.")
+                else:
+                    results = run_all(
+                        daily, budget=float(bt_budget), fee_bps=float(bt_fee),
+                        rf_annual=float(rf), smart_hi=float(smart_hi),
+                        limit_drop_k=float(limit_k),
+                    )
+
+                    table = metrics_table(results)
+                    dca_profit = results["dca"].metrics["profit"]
+                    smart_profit = results["smart_dca"].metrics["profit"]
+                    edge = smart_profit - dca_profit
+                    edge_pct = (smart_profit / dca_profit - 1.0) * 100 if dca_profit else float("nan")
+
+                    k1, k2, k3 = st.columns(3)
+                    k1.metric("DCA PROFIT", f"${dca_profit:,.0f}")
+                    k2.metric(
+                        "SMART-DCA PROFIT", f"${smart_profit:,.0f}",
+                        delta=f"${edge:,.0f} vs DCA",
+                    )
+                    best = max(results.values(), key=lambda r: r.metrics["sharpe"] if r.metrics["sharpe"] == r.metrics["sharpe"] else -9)
+                    k3.metric("BEST SHARPE", best.name, delta=f"{best.metrics['sharpe']:.2f}")
+
+                    if edge > 0:
+                        st.success(f"✅ Smart-DCA bate al DCA en este activo/periodo: +${edge:,.0f} ({edge_pct:+.1f}% sobre el beneficio del DCA).")
+                    else:
+                        st.warning(f"⚠️ En este activo/periodo Smart-DCA NO bate al DCA (${edge:,.0f}). Mira la columna Max DD: el valor puede estar en el control de riesgo, no en el beneficio bruto.")
+
+                    st.divider()
+                    st.plotly_chart(
+                        backtest_equity_chart(results, title=f"{bt_ticker} — EQUITY (same contributions)"),
+                        use_container_width=True, config=PLOTLY_CONFIG,
+                    )
+                    st.plotly_chart(
+                        backtest_drawdown_chart(results, title=f"{bt_ticker} — PORTFOLIO DRAWDOWN"),
+                        use_container_width=True, config=PLOTLY_CONFIG,
+                    )
+
+                    st.divider()
+                    st.markdown("#### METRICS")
+                    st.dataframe(table, use_container_width=True, hide_index=True)
+                    st.caption(
+                        "IRR %/yr = retorno money-weighted (TIR) anualizado, la métrica "
+                        "correcta cuando las aportaciones varían en el tiempo. "
+                        "Fill Rate = % de meses en que la orden límite se llenó "
+                        "(los meses sin llenar el dinero se queda en caja: ese es el "
+                        "talón de Aquiles del enfoque original)."
+                    )
+            except Exception as e:
+                st.error(f"RUNTIME ERROR: {str(e)}")

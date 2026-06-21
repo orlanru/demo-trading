@@ -1,9 +1,26 @@
 # Quantitative Asset Terminal (Streamlit + Docker)
 
-Aplicación en **Streamlit** para análisis cuantitativo con 3 módulos principales:
+Aplicación en **Streamlit** para análisis cuantitativo con 4 módulos principales:
 1) **Algorithmic Predictor**: calcula niveles de compra (AI projected low + limit buy) usando modelos `.pkl`.
 2) **Macro Liquidity Monitor**: consulta indicadores macro desde **FRED** (St. Louis Fed).
 3) **Sentiment & NLP Engine**: extrae titulares desde **Finviz**, calcula sentimiento con **VADER** y extrae keywords.
+4) **Strategy Backtest**: motor de backtest que compara DCA vs Smart-DCA (asignación dinámica) vs filtro de tendencia, con métricas reales (IRR, Sharpe, max drawdown). No necesita modelos `.pkl`: funciona solo con precios.
+
+---
+
+## Strategy Backtest — cómo batir al DCA (lectura importante)
+
+El "DCA con orden límite" original empataba con el DCA porque **solo cambiaba el precio de entrada, no la exposición**. La debilidad del DCA no es a qué precio entras, sino que es ciego a *cuánto* tienes invertido en cada régimen. Para batirlo hay que **variar la exposición** con una señal con edge.
+
+Este módulo introduce un marco de comparación honesto y dos palancas reales:
+
+- **Marco justo:** todas las estrategias reciben las *mismas* aportaciones mensuales (como una nómina). Lo único que cambia es cuánto despliega cada una y a qué precio. El resto queda en caja ("dry powder") y puede rentar el risk-free. Valor final = unidades · precio + caja. Sin look-ahead: la decisión del mes M usa señales del cierre de M-1.
+- **Smart-DCA (asignación dinámica):** multiplicador de aportación `m ∈ [0.3, 3]` según drawdown a 12m y RSI mensual. Compra más en las caídas, guarda pólvora seca cerca de máximos. Reglas transparentes (ver `services/signals.py`), sin parámetros ocultos.
+- **Trend-filtered DCA:** solo acumula mientras el precio está por encima de su SMA de 12 meses (estilo Faber). No busca ganar más arriba, sino *evitar las caídas profundas* → mejor Sharpe y menor drawdown, sobre todo en BTC.
+
+Métricas calculadas: beneficio, retorno total, **IRR anualizada** (money-weighted, la correcta cuando las aportaciones varían), **Sharpe**, **max drawdown**, exposición media y *fill rate* (% de meses en que la orden límite se llenó — el talón de Aquiles del enfoque original).
+
+> Importante: que Smart-DCA bata al DCA depende del activo y del periodo. El valor de un filtro de tendencia suele estar en el **control de riesgo** (drawdown), no en el beneficio bruto. El backtester está para *medirlo honestamente*, no para prometer alfa.
 
 Incluye visualizaciones interactivas con **Plotly**: zoom/pan, hover detallado y range slider.
 
@@ -54,7 +71,9 @@ Recomendada:
 │  ├─ features.py
 │  ├─ market_data.py
 │  ├─ macro_data.py
-│  └─ news_sentiment.py
+│  ├─ news_sentiment.py
+│  ├─ signals.py        # señales mensuales causales (drawdown, RSI, tendencia)
+│  └─ backtest.py       # motor de backtest + estrategias (DCA, Smart-DCA, ...)
 └─ charts/
    ├─ __init__.py
    └─ plotly_charts.py

@@ -259,6 +259,56 @@ def keywords_bar(keywords: list[tuple[str, int]], title="TOP KEYWORDS"):
     return fig
 
 
+def backtest_equity_chart(results: dict, title: str = "EQUITY CURVES — SAME CONTRIBUTIONS"):
+    """
+    Compara las curvas de valor de cartera de varias estrategias (mismo dinero
+    aportado). `results` es dict[str, BacktestResult].
+    """
+    palette = [THEME["green"], THEME["red"], THEME["cyan"], THEME["yellow"], "#B388FF"]
+    fig = go.Figure()
+
+    # Línea de referencia: dinero total aportado acumulado (lo que pusiste de tu
+    # bolsillo). Por encima = ganas; por debajo = pierdes.
+    any_res = next(iter(results.values()))
+    contributed = any_res.contributions.cumsum()
+    fig.add_trace(go.Scatter(
+        x=contributed.index, y=contributed.values,
+        mode="lines", name="Cash Contributed",
+        line=dict(color="rgba(255,255,255,0.45)", width=1.5, dash="dot"),
+        hovertemplate="%{x|%Y-%m}<br>Aportado: $%{y:,.0f}<extra></extra>",
+    ))
+
+    for i, r in enumerate(results.values()):
+        color = palette[i % len(palette)]
+        fig.add_trace(go.Scatter(
+            x=r.equity.index, y=r.equity.values,
+            mode="lines", name=r.name,
+            line=dict(color=color, width=2.2),
+            hovertemplate="%{x|%Y-%m}<br>" + r.name + ": $%{y:,.0f}<extra></extra>",
+        ))
+
+    _apply_terminal_layout(fig, title=title, height=520)
+    return fig
+
+
+def backtest_drawdown_chart(results: dict, title: str = "PORTFOLIO DRAWDOWN"):
+    """Drawdown de la curva de valor de cada estrategia (control de riesgo)."""
+    palette = [THEME["green"], THEME["red"], THEME["cyan"], THEME["yellow"], "#B388FF"]
+    fig = go.Figure()
+    for i, r in enumerate(results.values()):
+        eq = r.equity
+        dd = (eq / eq.cummax() - 1.0) * 100
+        fig.add_trace(go.Scatter(
+            x=dd.index, y=dd.values,
+            mode="lines", name=r.name,
+            line=dict(color=palette[i % len(palette)], width=1.8),
+            hovertemplate="%{x|%Y-%m}<br>" + r.name + ": %{y:.1f}%<extra></extra>",
+        ))
+    _apply_terminal_layout(fig, title=title, height=320)
+    fig.update_yaxes(ticksuffix="%")
+    return fig
+
+
 def fred_line(df: pd.DataFrame, title: str, hline: float | None = None):
     series = df.iloc[:, 0]
     fig = go.Figure()
