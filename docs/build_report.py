@@ -79,6 +79,36 @@ REPARTO = [  # método, universo -> (retorno medio, desviación típica)
 NOTICIAS = json.load(open("/tmp/claude-0/-home-user-demo-trading/fa96fec3-fcc9-5936-8976-5cd43ecf1070/scratchpad/noticias.json")) \
     if os.path.exists("/tmp/claude-0/-home-user-demo-trading/fa96fec3-fcc9-5936-8976-5cd43ecf1070/scratchpad/noticias.json") else None
 
+
+DIAG_NOTICIAS = [
+    ("retorno de hace 2 meses", -0.040, -0.91),
+    ("retorno del mes anterior", 0.098, 2.25),
+    ("retorno del MISMO mes", 0.220, 5.15),
+    ("retorno del mes SIGUIENTE", -0.060, -1.36),
+    ("retorno a 2 meses vista", -0.039, -0.88),
+]
+NOTICIAS_VENT = [
+    ("comprar el peor tratado (normalizado)", 1.0, 63.4, 0.29, 1.28),
+    ("comprar el peor tratado (nivel crudo)", 1.5, 65.6, 0.26, 0.60),
+    ("comprar el que más empeora", 0.8, 47.3, 0.53, 0.69),
+    ("comprar el mejor tratado", -0.3, 28.0, -0.75, 0.36),
+]
+BANDA_NOTICIAS = (-2.2, 2.1)
+
+REPARTO2 = [
+    ("aportación al infraponderado", 2.4, -2.3, -4.6),
+    ("DCA + rebalanceo anual (vende)", 0.7, -2.5, -5.7),
+    ("value averaging (Edleson)", -0.0, -5.9, -0.3),
+    ("aportar más en caídas >10%", -3.1, -6.2, -4.5),
+    ("volatilidad inversa", -3.4, -0.6, -2.3),
+]
+PREMIO_1N = [
+    ("sectores · 27 años", 0.58, 10.4, -0.1, 52.8),
+    ("sin NVDA · 20 años", 0.40, 5.5, None, None),
+    ("amplio · 22 años", 0.49, 2.7, -0.4, 33.3),
+    ("SPY+TLT+GLD · 22 años", 0.08, 1.7, 0.5, 39.6),
+]
+
 # ---------------------------------------------------------------- helpers SVG
 def esc(s):
     return html.escape(str(s), quote=True)
@@ -472,6 +502,43 @@ JS = """
 """
 
 
+def chart_diag_noticias():
+    W, H = 1040, 300
+    PADL, PADR = 250, 40
+    x0, x1 = PADL, W - PADR
+    fila = 40
+    vmin, vmax = -0.10, 0.26
+
+    def px(v):
+        return x0 + (v - vmin) / (vmax - vmin) * (x1 - x0)
+
+    p = [svg_open(W, H, "Correlación del tono de las noticias con el precio")]
+    ytop = 40
+    p.append(f'<text x="{PADL}" y="24" class="tick">PASADO Y PRESENTE</text>')
+    for i, (lab, c, t) in enumerate(DIAG_NOTICIAS):
+        yy = ytop + fila * i + fila / 2
+        futuro = "SIGUIENTE" in lab or "vista" in lab
+        if futuro and i == 3:
+            p.append(f'<line x1="{x0}" y1="{yy-fila/2}" x2="{x1}" y2="{yy-fila/2}" class="grid"/>')
+            p.append(f'<text x="{PADL}" y="{yy-fila/2-6:.0f}" class="tick">FUTURO</text>')
+        p.append(f'<text x="{PADL-14}" y="{yy+4}" class="rowlab" text-anchor="end">{esc(lab)}</text>')
+        sig_ = abs(t) > 2
+        cls = "dot-pos" if (sig_ and c > 0) else ("dot-neg" if sig_ else "dot-null")
+        xa, xb = (px(0), px(c)) if c > 0 else (px(c), px(0))
+        p.append(f'<rect x="{xa:.1f}" y="{yy-9}" width="{max(1.5,xb-xa):.1f}" height="18" rx="4" '
+                 f'class="{"bar-ceil" if (sig_ and c>0) else ("bar-neg" if c<0 else "bar-null")}" '
+                 f'data-tip="{esc(lab)}: correlación {c:+.3f}, t = {t:+.2f}"/>')
+        anchor = "start" if c > 0 else "end"
+        dx = 9 if c > 0 else -9
+        p.append(f'<text x="{px(c)+dx:.1f}" y="{yy+4}" class="val" text-anchor="{anchor}">'
+                 f'{c:+.3f}  (t={t:+.2f})</text>')
+    ybot = ytop + fila * len(DIAG_NOTICIAS)
+    p.append(f'<line x1="{px(0):.1f}" y1="{ytop}" x2="{px(0):.1f}" y2="{ybot}" class="zero"/>')
+    p.append(eje_x(x0, x1, ybot + 6, vmin, vmax, [-0.1, 0, 0.1, 0.2], "", "{:+.1f}"))
+    p.append("</svg>")
+    return "".join(p)
+
+
 def leyenda(items):
     sp = "".join(f'<span><i class="sw {c}" style="background:{b}"></i>{esc(t)}</span>'
                  for c, b, t in items)
@@ -516,9 +583,100 @@ def build():
          ["comprar el más caído · <b>sectores</b>", "−0,33 %", "−1,8 %", "−4,7 %", "−13,1 %"],
          ["momentum 12-1 · <b>sectores</b>", "+0,08 %", "+0,7 %", "+3,1 %", "−0,7 %"]])
 
-    noticias_html = ""
-    if NOTICIAS:
-        noticias_html = NOTICIAS.get("html", "")
+
+    tabla_rep2 = tabla(
+        ["regla de aportación (no predice nada)", "sectores 27a", "sin NVDA 20a", "amplio 22a"],
+        [[n,
+          f'<span style="color:var(--{"pos" if a>0 else "neg"})">{a:+.1f} pp</span>'.replace(".", ","),
+          f'<span style="color:var(--{"pos" if b>0 else "neg"})">{b:+.1f} pp</span>'.replace(".", ","),
+          f'<span style="color:var(--{"pos" if c>0 else "neg"})">{c:+.1f} pp</span>'.replace(".", ",")]
+         for n, a, b, c in REPARTO2])
+
+    tabla_premio = tabla(
+        ["universo", "correlación media", "premio en el camino completo",
+         "premio medio en ventanas de 10 años", "ventanas positivas"],
+        [[n, f"{corr:.2f}".replace(".", ","),
+          f"{full:+.1f} %".replace(".", ","),
+          "—" if roll is None else f'<span style="color:var(--neg)">{roll:+.1f} %</span>'.replace(".", ","),
+          "—" if pos is None else f"{pos:.1f} %".replace(".", ",")]
+         for n, corr, full, roll, pos in PREMIO_1N])
+
+    tabla_news = tabla(
+        ["señal de noticias", "vs equiponderado", "% gana", "t a 1 mes", "t a 3 meses"],
+        [[n, f"{d:+.1f} pp".replace(".", ","), f"{w:.1f} %".replace(".", ","),
+          f"{t1:+.2f}".replace(".", ","), f"{t3:+.2f}".replace(".", ",")]
+         for n, d, w, t1, t3 in NOTICIAS_VENT])
+
+    NOTICIAS_SECCION = f"""
+<hr>
+
+<h2>7 · La opinión contraria: comprar al peor tratado por la prensa</h2>
+<p class="dek">Sentimiento de noticias histórico de GDELT —tono medio de la cobertura,
+2017–2026, 116 meses, cinco activos con flujo de noticias propio: S&amp;P 500, Nasdaq 100,
+Russell 2000, oro y plata.</p>
+
+<p>Antes de medir si gana dinero hay una pregunta previa que decide el asunto:
+<b>¿el tono de las noticias adelanta al precio, o sólo lo refleja?</b></p>
+
+<figure>{chart_diag_noticias()}
+<figcaption>Correlación entre el tono de la cobertura de un activo y su retorno.
+El tono va pegado al <b>presente</b> (0,220, t = 5,15) y al mes recién pasado
+(0,098, t = 2,25), y no tiene relación con el futuro (−0,060, t = −1,36).
+<b>Las noticias te cuentan lo que ya ha pasado.</b> La plata sale "peor tratada"
+porque ya cayó; el Russell sale "bien tratado" porque ya subió.</figcaption></figure>
+
+{tabla_news}
+
+<p>Todas las variantes caen dentro de la banda del azar (±2,2 pp) y ningún
+estadístico t pasa de 1,3. Dicho eso, hay un matiz que la distingue de todo lo
+anterior: <b>el signo es positivo</b>. La correlación con el mes siguiente es
+−0,060 —tono malo, retorno algo mejor—, que es justo la dirección de tu hipótesis.
+No está refutada como sí lo está "comprar el más caído por precio": está
+por debajo del umbral de detección con 116 meses.</p>
+
+<div class="callout">
+<h3>Un falso positivo que estuvo a punto de colarse</h3>
+<p>Una sexta señal —pesimismo ponderado por volumen de cobertura— daba
+<b>+2,5 pp ganando el 78,5 %</b> de las ventanas. No era una señal: sólo tenía datos de
+volumen de S&amp;P 500 y Nasdaq, así que únicamente podía elegir entre esos dos, y en
+2017–2026 eso equivale a "quédate en bolsa estadounidense". Queda descartada por una
+guarda de cobertura, no por el resultado.</p>
+</div>
+
+<blockquote>La literatura ya lo anticipaba. Tetlock, Saar-Tsechansky y Macskassy (2008)
+encuentran <b>infra</b>rreacción a las noticias, no sobrerreacción: en transversal el
+sentimiento es momentum. Y Heston y Sinha (2017) documentan que la reacción a las malas
+noticias es <b>retardada y larga</b> — el peor tratado sigue cayendo durante meses.</blockquote>
+
+<hr>
+
+<h2>8 · Dejar de predecir: reglas de aportación</h2>
+<p class="dek">Todo lo anterior intentaba adivinar qué activo subiría. Estas reglas no
+predicen nada: sólo deciden cuánto dinero va a cada sitio y cuándo restaurar los pesos.
+El premio por rebalanceo es un efecto mecánico, no una apuesta.</p>
+
+{tabla_rep2}
+
+<h3>Tu DCA ya cobra ese premio</h3>
+<p>Repartir 1/N cada mes compra mecánicamente más participaciones de lo que ha caído:
+<b>eso ya es el rebalanceo contrario</b>. Comparado con dejar que la cartera derive hacia
+los ganadores, el simple reparto a partes iguales vale un 10,4 % en 27 años de sectores.
+Por eso añadirle reglas encima no aporta — el premio está cobrado.</p>
+
+{tabla_premio}
+
+<div class="callout">
+<h3>Y ese 10,4 % tampoco aguanta el escrutinio</h3>
+<p>Es <b>una sola realización</b> de 27 años, y viene sobre todo de dos episodios
+(puntocom y 2008). En ventanas móviles de 10 años el premio medio es <b>−0,1 %</b> y sale
+positivo en el 52,8 % de los casos: una moneda al aire. Además la predicción teórica falla:
+el premio debería crecer al bajar la correlación, y el universo con la correlación más
+<i>alta</i> (sectores, 0,58) es el que más premio muestra, mientras que SPY+TLT+GLD, con
+correlación 0,08, se queda en +1,7 %.</p>
+</div>
+"""
+
+    noticias_html = NOTICIAS_SECCION
 
     return f"""<title>La banda del azar</title>
 <style>{CSS}</style>

@@ -101,6 +101,19 @@ def main() -> None:
         except Exception as e:
             print(f"  (news_attention_drop no disponible: {e})")
 
+    # Guarda de cobertura: una señal que sólo puntúa a parte del universo no
+    # compite contra el equiponderado, compite restringida a un subconjunto —
+    # y eso produce falsos positivos que parecen edge.
+    for n in list(señales):
+        cubre = (señales[n].notna().sum() > 0).sum()
+        if cubre < len(disponibles):
+            faltan = [c for c in disponibles if señales[n][c].notna().sum() == 0]
+            print(f"  DESCARTADA {n}: sólo puntúa {cubre}/{len(disponibles)} activos "
+                  f"(sin datos para {', '.join(faltan)}). Compararía un subconjunto "
+                  f"contra el universo entero.")
+            del señales[n]
+    print()
+
     print("-- Edge de selección mes a mes (Newey-West) --")
     filas = [summarize(selection_edge(panel, sc, horizon=h), n, h)
              for n, sc in señales.items() for h in (1, 3)]
