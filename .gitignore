@@ -35,3 +35,6 @@ nltk_data/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Datos de noticias descargados de GDELT (se regeneran con backtest.fetch_news)
+data/news/*.json

@@ -105,6 +105,47 @@ def window_table(panel: Panel, scores: pd.DataFrame, window: int = 24,
     return pd.DataFrame(rows)
 
 
+def window_table_weights(panel: Panel, weights: pd.DataFrame, window: int = 24,
+                         contribution: float = 1000.0) -> pd.DataFrame:
+    """Como window_table, pero repartiendo cada aportación con pesos arbitrarios.
+
+    Sirve para reglas de REPARTO (volatilidad inversa, paridad de riesgo), que no
+    eligen un activo sino que dosifican entre todos. Los pesos del mes t-1 son
+    los que se aplican a la compra del mes t.
+    """
+    cols = list(panel.close.columns)
+    w = weights.reindex(index=panel.months, columns=cols)
+    buy = panel.buy.to_numpy(float)
+    close = panel.close.to_numpy(float)
+    M, A = buy.shape
+
+    units = contribution / buy
+    strat_units = np.zeros((M, A))
+    for m in range(M):
+        row = w.iloc[m - 1] if m > 0 else pd.Series(np.nan, index=cols)
+        row = row.fillna(0.0)
+        s = row.sum()
+        pesos = (row / s).to_numpy() if s > 0 else np.full(A, 1.0 / A)
+        strat_units[m] = units[m] * pesos
+    ew_units = units / A
+
+    rows = []
+    for s in range(0, M - window + 1):
+        e = s + window - 1
+        px = close[e]
+        inv = contribution * window
+        estrategia = float(strat_units[s:e + 1].sum(0) @ px) / inv - 1
+        ew = float(ew_units[s:e + 1].sum(0) @ px) / inv - 1
+        singles = (units[s:e + 1].sum(0) * px) / inv - 1
+        rows.append({
+            "inicio": panel.months[s], "fin": panel.months[e],
+            "estrategia": estrategia, "equipond": ew,
+            "mediana": float(np.median(singles)),
+            "percentil": float((singles < estrategia).mean()),
+        })
+    return pd.DataFrame(rows)
+
+
 def random_band(panel: Panel, window: int = 24, n: int = 200, seed: int = 0) -> dict:
     """Distribución de resultados eligiendo al azar. Cualquier señal que caiga
     dentro de esta banda no aporta información."""
