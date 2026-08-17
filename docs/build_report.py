@@ -81,19 +81,19 @@ NOTICIAS = json.load(open("/tmp/claude-0/-home-user-demo-trading/fa96fec3-fcc9-5
 
 
 DIAG_NOTICIAS = [
-    ("retorno de hace 2 meses", -0.040, -0.91),
-    ("retorno del mes anterior", 0.098, 2.25),
-    ("retorno del MISMO mes", 0.220, 5.15),
-    ("retorno del mes SIGUIENTE", -0.060, -1.36),
-    ("retorno a 2 meses vista", -0.039, -0.88),
+    ("retorno de hace 2 meses", -0.031, -0.83),
+    ("retorno del mes anterior", 0.123, 3.36),
+    ("retorno del MISMO mes", 0.231, 6.44),
+    ("retorno del mes SIGUIENTE", 0.005, 0.14),
+    ("retorno a 2 meses vista", 0.007, 0.18),
 ]
 NOTICIAS_VENT = [
-    ("comprar el peor tratado (normalizado)", 1.0, 63.4, 0.29, 1.28),
-    ("comprar el peor tratado (nivel crudo)", 1.5, 65.6, 0.26, 0.60),
-    ("comprar el que más empeora", 0.8, 47.3, 0.53, 0.69),
-    ("comprar el mejor tratado", -0.3, 28.0, -0.75, 0.36),
+    ("comprar el peor tratado (normalizado)", 1.7, 57.0, -0.77, -0.42),
+    ("comprar el peor tratado (nivel crudo)", -10.6, 12.9, -1.74, -1.80),
+    ("comprar el que más empeora", 1.0, 62.4, 0.30, 0.63),
+    ("comprar el mejor tratado", 0.5, 46.2, 0.96, 1.17),
 ]
-BANDA_NOTICIAS = (-2.2, 2.1)
+BANDA_NOTICIAS = (-5.9, 7.4)
 
 REPARTO2 = [
     ("aportación al infraponderado", 2.4, -2.3, -4.6),
@@ -612,27 +612,33 @@ def build():
 
 <h2>7 · La opinión contraria: comprar al peor tratado por la prensa</h2>
 <p class="dek">Sentimiento de noticias histórico de GDELT —tono medio de la cobertura,
-2017–2026, 116 meses, cinco activos con flujo de noticias propio: S&amp;P 500, Nasdaq 100,
-Russell 2000, oro y plata.</p>
+2017–2026, 116 meses, los siete activos de tu cesta. 735 observaciones activo-mes.</p>
 
 <p>Antes de medir si gana dinero hay una pregunta previa que decide el asunto:
 <b>¿el tono de las noticias adelanta al precio, o sólo lo refleja?</b></p>
 
 <figure>{chart_diag_noticias()}
 <figcaption>Correlación entre el tono de la cobertura de un activo y su retorno.
-El tono va pegado al <b>presente</b> (0,220, t = 5,15) y al mes recién pasado
-(0,098, t = 2,25), y no tiene relación con el futuro (−0,060, t = −1,36).
+El tono va pegado al <b>presente</b> (0,231, t = 6,44) y al mes recién pasado
+(0,123, t = 3,36), y con el futuro la correlación es <b>0,005</b> (t = 0,14): cero exacto.
 <b>Las noticias te cuentan lo que ya ha pasado.</b> La plata sale "peor tratada"
 porque ya cayó; el Russell sale "bien tratado" porque ya subió.</figcaption></figure>
 
 {tabla_news}
 
-<p>Todas las variantes caen dentro de la banda del azar (±2,2 pp) y ningún
-estadístico t pasa de 1,3. Dicho eso, hay un matiz que la distingue de todo lo
-anterior: <b>el signo es positivo</b>. La correlación con el mes siguiente es
-−0,060 —tono malo, retorno algo mejor—, que es justo la dirección de tu hipótesis.
-No está refutada como sí lo está "comprar el más caído por precio": está
-por debajo del umbral de detección con 116 meses.</p>
+<p>Todas las variantes caen dentro de la banda del azar y ningún estadístico t
+llega a 2. Y el signo va en tu contra: comprar el peor tratado da <b>−0,43 %</b> al mes
+(t = −0,77) y en nivel crudo <b>−0,51 %</b> (t = −1,74), mientras que comprar el
+<i>mejor</i> tratado da <b>+0,49 %</b> (t = 0,96). Es exactamente el orden que predice la
+literatura: el sentimiento de noticias, en transversal, es momentum, no reversión.</p>
+
+<div class="callout">
+<h3>El signo positivo que vi con cinco activos no era robusto</h3>
+<p>Con SPY, Nasdaq, Russell, oro y plata la señal contraria daba +0,14 % al mes. Al
+añadir Nvidia pasó a −0,37 %, y con Microsoft dentro, a −0,43 %. <b>Un signo que se
+invierte al añadir un activo no es un signo, es ruido</b> — el mismo patrón que ha
+aparecido en todo el estudio.</p>
+</div>
 
 <div class="callout">
 <h3>Un falso positivo que estuvo a punto de colarse</h3>

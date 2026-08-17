@@ -35,8 +35,10 @@ QUERIES = {
     "IWM": '("Russell 2000" OR "small cap stocks")',
     "GLD": '("gold price" OR "gold prices")',
     "SLV": '("silver price" OR "silver prices")',
-    "NVDA": '("Nvidia")',
-    "MSFT": '("Microsoft")',
+    # Sin paréntesis en los términos sueltos: GDELT sólo los admite alrededor
+    # de expresiones con OR y devuelve error de sintaxis en otro caso.
+    "NVDA": 'Nvidia',
+    "MSFT": 'Microsoft',
 }
 
 
