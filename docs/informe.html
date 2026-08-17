@@ -1,0 +1,337 @@
+<title>La banda del azar</title>
+<style>
+:root{
+  --ground:#EFF2F1; --surface:#FBFCFB; --ink:#141C1A; --ink-2:#3D4B48; --muted:#5F6D6A;
+  --hair:#D6DEDB; --band:rgba(120,134,130,.16); --band-line:#93A19E;
+  --neg:#C0442A; --pos:#07836F; --ceil:#B07A12; --null:#8A9895;
+  --stem:#C3CDCA;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#111614; --surface:#19201F; --ink:#E4EBE9; --ink-2:#BCC7C4; --muted:#93A19E;
+    --hair:#2B3634; --band:rgba(150,166,162,.14); --band-line:#6B7B78;
+    --neg:#D06A50; --pos:#2CA08B; --ceil:#B98D25; --null:#7F8E8B;
+    --stem:#38443F;
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#111614; --surface:#19201F; --ink:#E4EBE9; --ink-2:#BCC7C4; --muted:#93A19E;
+  --hair:#2B3634; --band:rgba(150,166,162,.14); --band-line:#6B7B78;
+  --neg:#D06A50; --pos:#2CA08B; --ceil:#B98D25; --null:#7F8E8B;
+  --stem:#38443F;
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  font-size:17px; line-height:1.65; margin:0;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px 100px}
+.prose{max-width:68ch}
+h1,h2,h3{font-family:Georgia,"Iowan Old Style","Times New Roman",serif;font-weight:600;
+  text-wrap:balance;line-height:1.18;margin:0}
+h1{font-size:clamp(2.3rem,5.2vw,3.6rem);letter-spacing:-.015em}
+h2{font-size:clamp(1.5rem,3vw,2rem);margin:76px 0 6px}
+h3{font-size:1.14rem;margin:38px 0 4px}
+p{margin:14px 0}
+a{color:var(--pos)}
+strong{font-weight:640}
+.lede{font-size:1.2rem;color:var(--ink-2);max-width:60ch;margin-top:18px}
+.eyebrow{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.72rem;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.dek{color:var(--muted);font-size:.96rem;margin:6px 0 22px;max-width:66ch}
+
+header.top{padding:76px 0 0;border-bottom:1px solid var(--hair);margin-bottom:8px}
+.meta{display:flex;flex-wrap:wrap;gap:8px 26px;margin:30px 0 34px;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.78rem;color:var(--muted)}
+.meta b{color:var(--ink-2);font-weight:500}
+
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:14px;margin:34px 0 8px}
+.tile{background:var(--surface);border:1px solid var(--hair);border-radius:10px;padding:20px 20px 18px}
+.tile .n{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:2.15rem;
+  font-variant-numeric:tabular-nums;line-height:1.05;letter-spacing:-.02em}
+.tile .k{font-size:.83rem;color:var(--muted);margin-top:9px}
+.tile.bad .n{color:var(--neg)} .tile.flat .n{color:var(--null)} .tile.good .n{color:var(--pos)}
+
+figure{margin:26px 0 8px;background:var(--surface);border:1px solid var(--hair);
+  border-radius:10px;padding:20px 22px 14px;overflow-x:auto}
+figcaption{font-size:.86rem;color:var(--muted);margin-top:12px;max-width:74ch}
+svg.chart{display:block;min-width:660px;overflow:visible}
+.facet{font-family:Georgia,serif;font-size:.98rem;fill:var(--ink)}
+.facet-meta{font-family:ui-monospace,Menlo,monospace;font-size:.7rem;fill:var(--muted)}
+.rowlab{font-size:.8rem;fill:var(--ink-2)}
+.tick{font-family:ui-monospace,Menlo,monospace;font-size:.68rem;fill:var(--muted)}
+.val{font-family:ui-monospace,Menlo,monospace;font-size:.73rem;fill:var(--ink-2);
+  font-variant-numeric:tabular-nums}
+.axis{stroke:var(--hair);stroke-width:1}
+.grid{stroke:var(--hair);stroke-width:1;stroke-dasharray:2 4}
+.zero{stroke:var(--band-line);stroke-width:1.5}
+.thresh{stroke:var(--band-line);stroke-width:1;stroke-dasharray:3 3}
+.track{stroke:var(--hair);stroke-width:1}
+.stem{stroke:var(--stem);stroke-width:1.5}
+.band{fill:var(--band)}
+.line{fill:none;stroke:var(--neg);stroke-width:2;stroke-linejoin:round}
+circle,rect[class^="bar"]{stroke:var(--surface);stroke-width:2}
+.dot-neg{fill:var(--neg)} .dot-pos{fill:var(--pos)} .dot-null{fill:var(--null)}
+.dot-pos-fill{fill:var(--pos);stroke:none}
+.bar-neg{fill:var(--neg)} .bar-ceil{fill:var(--ceil)} .bar-null{fill:var(--null)}
+[data-tip]{cursor:crosshair}
+
+.legend{display:flex;flex-wrap:wrap;gap:7px 20px;margin:2px 0 0;font-size:.8rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.sw{width:11px;height:11px;border-radius:50%;display:inline-block}
+.sw.band{width:22px;height:11px;border-radius:3px;background:var(--band);
+  border:1px solid var(--band-line)}
+
+.tw{overflow-x:auto;margin:24px 0}
+table{border-collapse:collapse;width:100%;font-size:.9rem;min-width:520px}
+th,td{padding:9px 13px;text-align:right;border-bottom:1px solid var(--hair);
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;white-space:normal}
+thead th{font-family:ui-monospace,Menlo,monospace;font-size:.7rem;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--muted);font-weight:500;border-bottom:1px solid var(--band-line)}
+tbody tr:hover{background:var(--band)}
+td.neg{color:var(--neg)} td.pos{color:var(--pos)} td.k{font-family:ui-monospace,Menlo,monospace}
+
+blockquote{margin:24px 0;padding:2px 0 2px 20px;border-left:3px solid var(--band-line);
+  color:var(--ink-2);font-size:1.02rem}
+.callout{background:var(--surface);border:1px solid var(--hair);border-left:3px solid var(--neg);
+  border-radius:8px;padding:18px 22px;margin:26px 0}
+.callout.ok{border-left-color:var(--pos)}
+.callout h3{margin:0 0 6px;font-size:1.04rem}
+.callout p{margin:6px 0 0;font-size:.95rem;color:var(--ink-2)}
+ul{max-width:66ch;padding-left:20px} li{margin:9px 0}
+hr{border:0;border-top:1px solid var(--hair);margin:64px 0}
+footer{color:var(--muted);font-size:.85rem;margin-top:70px;padding-top:24px;
+  border-top:1px solid var(--hair);max-width:74ch}
+#tip{position:fixed;pointer-events:none;opacity:0;transition:opacity .12s;
+  background:var(--ink);color:var(--ground);padding:7px 11px;border-radius:6px;
+  font-size:.79rem;max-width:280px;line-height:1.4;z-index:99}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+<div id="tip"></div>
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">Backtest · DCA · 1999–2026</div>
+  <h1>La banda del azar</h1>
+  <p class="lede">Dos ideas para mejorar la aportación mensual, medidas contra
+  lo que pasa si no decides nada. Ninguna sale de la banda que marca el puro azar.</p>
+  <div class="meta">
+    <span><b>4</b> universos · hasta <b>27</b> años</span>
+    <span><b>10</b> señales + <b>2</b> modelos de ML</span>
+    <span>precios ajustados por dividendos</span>
+    <span>aportación de <b>1.000 $</b>/mes</span>
+  </div>
+</header>
+
+<section class="prose">
+<div class="tiles">
+  <div class="tile flat"><div class="n">50</div><div class="k">percentil en que acaba
+    “comprar el más barato” entre los activos disponibles. El azar acaba en el 50</div></div>
+  <div class="tile bad"><div class="n">−2,9<span style="font-size:1.1rem"> pp</span></div>
+    <div class="k">frente al DCA equiponderado en tu cesta sin NVDA, sobre 222 ventanas
+    de 24 aportaciones</div></div>
+  <div class="tile flat"><div class="n">1,19</div><div class="k">el mayor |t| de las 10 señales.
+    El umbral honesto, corregido por probar tantas, está en 2,9</div></div>
+  <div class="tile bad"><div class="n">−27<span style="font-size:1.1rem"> %</span></div>
+    <div class="k">de retraso a 3 años del activo más caído frente a la media del
+    universo (t = −2,80)</div></div>
+</div>
+</section>
+
+<h2>1 · Elegir el momento del mes</h2>
+<p class="dek">La primera idea: en vez de comprar el día 1, poner una orden límite en el
+mínimo que predice el modelo. Se prueba con el modelo reentrenado walk-forward, y
+además con un oráculo que acierta el mínimo exacto — la cota que ningún modelo puede superar.</p>
+
+<figure><svg viewBox="0 0 1040 330" width="100%" role="img" aria-label="Estrategia de orden límite frente al DCA" class="chart"><text x="0" y="26" class="facet">SPY</text><text x="216" y="53.0" class="rowlab" text-anchor="end">DCA</text><circle cx="525.9" cy="49.0" r="5" class="dot-null" data-tip="DCA: referencia"/><text x="216" y="79.0" class="rowlab" text-anchor="end">límite, acumula caja</text><rect x="424.5" y="67.0" width="101.4" height="16" rx="4" class="bar-neg" data-tip="límite, acumula caja: -3.77% frente al DCA"/><text x="416.5" y="79.0" class="val" text-anchor="end">-3.77%</text><text x="216" y="105.0" class="rowlab" text-anchor="end">límite, compra al cierre</text><rect x="503.8" y="93.0" width="22.1" height="16" rx="4" class="bar-neg" data-tip="límite, compra al cierre: -0.82% frente al DCA"/><text x="495.8" y="105.0" class="val" text-anchor="end">-0.82%</text><text x="216" y="131.0" class="rowlab" text-anchor="end">límite, compra mes siguiente</text><rect x="500.3" y="119.0" width="25.6" height="16" rx="4" class="bar-neg" data-tip="límite, compra mes siguiente: -0.95% frente al DCA"/><text x="492.3" y="131.0" class="val" text-anchor="end">-0.95%</text><text x="216" y="157.0" class="rowlab" text-anchor="end">ORÁCULO: mínimo exacto</text><rect x="525.9" y="145.0" width="95.8" height="16" rx="4" class="bar-ceil" data-tip="ORÁCULO: mínimo exacto: +3.56% frente al DCA"/><text x="629.6" y="157.0" class="val" text-anchor="start">+3.56%</text><line x1="525.9" y1="36" x2="525.9" y2="166" class="zero"/><text x="0" y="210" class="facet">BTC-USD</text><text x="216" y="237.0" class="rowlab" text-anchor="end">DCA</text><circle cx="525.9" cy="233.0" r="5" class="dot-null" data-tip="DCA: referencia"/><text x="216" y="263.0" class="rowlab" text-anchor="end">límite, acumula caja</text><rect x="261.5" y="251.0" width="264.4" height="16" rx="4" class="bar-neg" data-tip="límite, acumula caja: -9.83% frente al DCA"/><text x="253.5" y="263.0" class="val" text-anchor="end">-9.83%</text><text x="216" y="289.0" class="rowlab" text-anchor="end">límite, compra al cierre</text><rect x="426.9" y="277.0" width="99.0" height="16" rx="4" class="bar-neg" data-tip="límite, compra al cierre: -3.68% frente al DCA"/><text x="418.9" y="289.0" class="val" text-anchor="end">-3.68%</text><text x="216" y="315.0" class="rowlab" text-anchor="end">límite, compra mes siguiente</text><rect x="427.2" y="303.0" width="98.7" height="16" rx="4" class="bar-neg" data-tip="límite, compra mes siguiente: -3.67% frente al DCA"/><text x="419.2" y="315.0" class="val" text-anchor="end">-3.67%</text><text x="216" y="341.0" class="rowlab" text-anchor="end">ORÁCULO: mínimo exacto</text><rect x="525.9" y="329.0" width="444.9" height="16" rx="4" class="bar-ceil" data-tip="ORÁCULO: mínimo exacto: +16.54% frente al DCA"/><text x="978.7" y="341.0" class="val" text-anchor="start">+16.54%</text><line x1="525.9" y1="220" x2="525.9" y2="350" class="zero"/><line x1="230" y1="364" x2="1010" y2="364" class="axis"/><line x1="256.9" y1="364" x2="256.9" y2="369" class="axis"/><text x="256.9" y="382" class="tick" text-anchor="middle">-10%</text><line x1="391.4" y1="364" x2="391.4" y2="369" class="axis"/><text x="391.4" y="382" class="tick" text-anchor="middle">-5%</text><line x1="525.9" y1="364" x2="525.9" y2="369" class="axis"/><text x="525.9" y="382" class="tick" text-anchor="middle">+0%</text><line x1="660.3" y1="364" x2="660.3" y2="369" class="axis"/><text x="660.3" y="382" class="tick" text-anchor="middle">+5%</text><line x1="794.8" y1="364" x2="794.8" y2="369" class="axis"/><text x="794.8" y="382" class="tick" text-anchor="middle">+10%</text><line x1="929.3" y1="364" x2="929.3" y2="369" class="axis"/><text x="929.3" y="382" class="tick" text-anchor="middle">+15%</text></svg>
+<figcaption>Diferencia de riqueza final frente a comprar el día 1 de cada mes.
+El oráculo (ocre) es el techo teórico de toda la arquitectura: <b>ni siquiera
+adivinando el mínimo exacto 70 veces seguidas se gana más de un 3,6 % en SPY</b>,
+porque el descuento se aplica una vez y no compone. Fallar un mes, en cambio, sí
+compone: ese dinero se pierde toda la deriva del activo.</figcaption></figure>
+
+<div class="callout">
+<h3>El error del modelo es del tamaño del premio entero</h3>
+<p>El descuento medio capturable dentro de un mes en SPY es del <b>3,25 %</b>.
+El error medio de la predicción es de <b>3,26 puntos</b>. No hay margen del que vivir.
+En BTC el premio es mayor (12,8 %) pero el error también (9,2 pp).</p>
+</div>
+
+<figure><svg viewBox="0 0 1040 300" width="100%" role="img" aria-label="Cuanto más esperas a que baje, peor" class="chart"><line x1="70" y1="45.7" x2="1000" y2="45.7" class="grid"/><text x="60" y="49.7" class="tick" text-anchor="end">0%</text><line x1="70" y1="108.6" x2="1000" y2="108.6" class="grid"/><text x="60" y="112.6" class="tick" text-anchor="end">-2%</text><line x1="70" y1="171.4" x2="1000" y2="171.4" class="grid"/><text x="60" y="175.4" class="tick" text-anchor="end">-4%</text><line x1="70" y1="234.3" x2="1000" y2="234.3" class="grid"/><text x="60" y="238.3" class="tick" text-anchor="end">-6%</text><line x1="70" y1="45.7" x2="1000" y2="45.7" class="zero"/><text x="1000" y="37.7" class="tick" text-anchor="end">DCA</text><polyline points="70.0,56.1 163.0,66.1 256.0,77.8 349.0,102.6 535.0,102.0 721.0,167.0 1000.0,232.4" class="line"/><circle cx="70.0" cy="56.1" r="5" class="dot-neg" data-tip="esperar una caída del 0%: -0.33% frente al DCA"/><circle cx="163.0" cy="66.1" r="5" class="dot-neg" data-tip="esperar una caída del 1%: -0.65% frente al DCA"/><circle cx="256.0" cy="77.8" r="5" class="dot-neg" data-tip="esperar una caída del 2%: -1.02% frente al DCA"/><circle cx="349.0" cy="102.6" r="5" class="dot-neg" data-tip="esperar una caída del 3%: -1.81% frente al DCA"/><circle cx="535.0" cy="102.0" r="5" class="dot-neg" data-tip="esperar una caída del 5%: -1.79% frente al DCA"/><circle cx="721.0" cy="167.0" r="5" class="dot-neg" data-tip="esperar una caída del 7%: -3.86% frente al DCA"/><circle cx="1000.0" cy="232.4" r="5" class="dot-neg" data-tip="esperar una caída del 10%: -5.94% frente al DCA"/><text x="70.0" y="42.1" class="val" text-anchor="middle">−0,33%</text><text x="1000.0" y="254.4" class="val" text-anchor="end">−5,94%</text><text x="70.0" y="272.0" class="tick" text-anchor="middle">0%</text><text x="256.0" y="272.0" class="tick" text-anchor="middle">2%</text><text x="535.0" y="272.0" class="tick" text-anchor="middle">5%</text><text x="721.0" y="272.0" class="tick" text-anchor="middle">7%</text><text x="1000.0" y="272.0" class="tick" text-anchor="middle">10%</text><text x="535.0" y="292" class="tick" text-anchor="middle">descuento exigido antes de comprar</text></svg>
+<figcaption>Sin modelo ninguno: exigir un descuento fijo antes de comprar. La caída
+es monótona — <b>cuanto más esperas, peor</b>. Ni siquiera exigir un 0 % (comprar cuando
+el precio vuelve al cierre del mes anterior) bate al DCA. El problema no es el
+modelo: es el mecanismo.</figcaption></figure>
+
+<hr>
+
+<h2>2 · Elegir el activo</h2>
+<p class="dek">La segunda idea: aportar lo mismo cada mes, pero al activo que cotiza
+más barato respecto a su línea de tendencia. El benchmark honesto no es la mediana de
+los activos —esa la bate cualquiera que diversifique— sino el <b>DCA equiponderado</b>:
+mismo dinero, mismos activos, cero decisiones.</p>
+
+<figure><svg viewBox="0 0 1040 1160" width="100%" role="img" aria-label="Diferencia frente al DCA equiponderado, por señal y universo" class="chart"><text x="0" y="30" class="facet">10 sectores + SPY</text><text x="1010" y="30" class="facet-meta" text-anchor="end">1999–2026 · 333 meses</text><rect x="563.7" y="42" width="88.4" height="208" class="band"/><line x1="610.0" y1="42" x2="610.0" y2="250" class="zero"/><text x="196" y="59.0" class="rowlab" text-anchor="end">trend_gap</text><line x1="610.0" y1="55.0" x2="631.1" y2="55.0" class="stem"/><circle cx="631.1" cy="55.0" r="5.5" class="dot-null" data-tip="trend_gap · 10 sectores + SPY: +0.5 pp frente al equiponderado — dentro de la banda del azar"/><text x="641.1" y="59.0" class="val" text-anchor="start">+0.5</text><text x="196" y="85.0" class="rowlab" text-anchor="end">trend_gap_filtrado</text><line x1="610.0" y1="81.0" x2="614.2" y2="81.0" class="stem"/><circle cx="614.2" cy="81.0" r="5.5" class="dot-null" data-tip="trend_gap_filtrado · 10 sectores + SPY: +0.1 pp frente al equiponderado — dentro de la banda del azar"/><text x="624.2" y="85.0" class="val" text-anchor="start">+0.1</text><text x="196" y="111.0" class="rowlab" text-anchor="end">el más caído</text><line x1="610.0" y1="107.0" x2="559.5" y2="107.0" class="stem"/><circle cx="559.5" cy="107.0" r="5.5" class="dot-neg" data-tip="el más caído · 10 sectores + SPY: -1.2 pp frente al equiponderado"/><text x="549.5" y="111.0" class="val" text-anchor="end">-1.2</text><text x="196" y="137.0" class="rowlab" text-anchor="end">reversión 1 mes</text><line x1="610.0" y1="133.0" x2="584.7" y2="133.0" class="stem"/><circle cx="584.7" cy="133.0" r="5.5" class="dot-null" data-tip="reversión 1 mes · 10 sectores + SPY: -0.6 pp frente al equiponderado — dentro de la banda del azar"/><text x="574.7" y="137.0" class="val" text-anchor="end">-0.6</text><text x="196" y="163.0" class="rowlab" text-anchor="end">momentum 12-1</text><line x1="610.0" y1="159.0" x2="626.8" y2="159.0" class="stem"/><circle cx="626.8" cy="159.0" r="5.5" class="dot-null" data-tip="momentum 12-1 · 10 sectores + SPY: +0.4 pp frente al equiponderado — dentro de la banda del azar"/><text x="636.8" y="163.0" class="val" text-anchor="start">+0.4</text><text x="196" y="189.0" class="rowlab" text-anchor="end">value 5 años</text><line x1="610.0" y1="185.0" x2="597.4" y2="185.0" class="stem"/><circle cx="597.4" cy="185.0" r="5.5" class="dot-null" data-tip="value 5 años · 10 sectores + SPY: -0.3 pp frente al equiponderado — dentro de la banda del azar"/><text x="587.4" y="189.0" class="val" text-anchor="end">-0.3</text><text x="196" y="215.0" class="rowlab" text-anchor="end">ML Ridge</text><line x1="610.0" y1="211.0" x2="605.8" y2="211.0" class="stem"/><circle cx="605.8" cy="211.0" r="5.5" class="dot-null" data-tip="ML Ridge · 10 sectores + SPY: -0.1 pp frente al equiponderado — dentro de la banda del azar"/><text x="595.8" y="215.0" class="val" text-anchor="end">-0.1</text><text x="196" y="241.0" class="rowlab" text-anchor="end">ML GBM</text><line x1="610.0" y1="237.0" x2="643.7" y2="237.0" class="stem"/><circle cx="643.7" cy="237.0" r="5.5" class="dot-null" data-tip="ML GBM · 10 sectores + SPY: +0.8 pp frente al equiponderado — dentro de la banda del azar"/><text x="653.7" y="241.0" class="val" text-anchor="start">+0.8</text><line x1="210" y1="256" x2="1010" y2="256" class="axis"/><line x1="273.2" y1="256" x2="273.2" y2="261" class="axis"/><text x="273.2" y="274" class="tick" text-anchor="middle">-8 pp</text><line x1="441.6" y1="256" x2="441.6" y2="261" class="axis"/><text x="441.6" y="274" class="tick" text-anchor="middle">-4 pp</text><line x1="610.0" y1="256" x2="610.0" y2="261" class="axis"/><text x="610.0" y="274" class="tick" text-anchor="middle">+0 pp</text><line x1="778.4" y1="256" x2="778.4" y2="261" class="axis"/><text x="778.4" y="274" class="tick" text-anchor="middle">+4 pp</text><line x1="946.8" y1="256" x2="946.8" y2="261" class="axis"/><text x="946.8" y="274" class="tick" text-anchor="middle">+8 pp</text><text x="0" y="310" class="facet">tu cesta (con NVDA)</text><text x="1010" y="310" class="facet-meta" text-anchor="end">2006–2026 · 245 meses</text><rect x="450.0" y="322" width="349.5" height="208" class="band"/><line x1="610.0" y1="322" x2="610.0" y2="530" class="zero"/><text x="196" y="339.0" class="rowlab" text-anchor="end">trend_gap</text><line x1="610.0" y1="335.0" x2="542.6" y2="335.0" class="stem"/><circle cx="542.6" cy="335.0" r="5.5" class="dot-null" data-tip="trend_gap · tu cesta (con NVDA): -1.6 pp frente al equiponderado — dentro de la banda del azar"/><text x="532.6" y="339.0" class="val" text-anchor="end">-1.6</text><text x="196" y="365.0" class="rowlab" text-anchor="end">trend_gap_filtrado</text><line x1="610.0" y1="361.0" x2="643.7" y2="361.0" class="stem"/><circle cx="643.7" cy="361.0" r="5.5" class="dot-null" data-tip="trend_gap_filtrado · tu cesta (con NVDA): +0.8 pp frente al equiponderado — dentro de la banda del azar"/><text x="653.7" y="365.0" class="val" text-anchor="start">+0.8</text><text x="196" y="391.0" class="rowlab" text-anchor="end">el más caído</text><line x1="610.0" y1="387.0" x2="900.5" y2="387.0" class="stem"/><circle cx="900.5" cy="387.0" r="5.5" class="dot-pos" data-tip="el más caído · tu cesta (con NVDA): +6.9 pp frente al equiponderado"/><text x="910.5" y="391.0" class="val" text-anchor="start">+6.9</text><text x="196" y="417.0" class="rowlab" text-anchor="end">reversión 1 mes</text><line x1="610.0" y1="413.0" x2="673.2" y2="413.0" class="stem"/><circle cx="673.2" cy="413.0" r="5.5" class="dot-null" data-tip="reversión 1 mes · tu cesta (con NVDA): +1.5 pp frente al equiponderado — dentro de la banda del azar"/><text x="683.2" y="417.0" class="val" text-anchor="start">+1.5</text><text x="196" y="443.0" class="rowlab" text-anchor="end">momentum 12-1</text><line x1="610.0" y1="439.0" x2="1010.0" y2="439.0" class="stem"/><circle cx="1010.0" cy="439.0" r="5.5" class="dot-pos" data-tip="momentum 12-1 · tu cesta (con NVDA): +24.5 pp frente al equiponderado"/><polygon points="1006,439.0 996,434.0 996,444.0" class="dot-pos-fill"/><text x="988.0" y="443.0" class="val" text-anchor="end">+24.5 → es comprar NVDA</text><text x="196" y="469.0" class="rowlab" text-anchor="end">value 5 años</text><text x="618.0" y="469.0" class="tick">no probado</text><text x="196" y="495.0" class="rowlab" text-anchor="end">ML Ridge</text><text x="618.0" y="495.0" class="tick">no probado</text><text x="196" y="521.0" class="rowlab" text-anchor="end">ML GBM</text><text x="618.0" y="521.0" class="tick">no probado</text><line x1="210" y1="536" x2="1010" y2="536" class="axis"/><line x1="273.2" y1="536" x2="273.2" y2="541" class="axis"/><text x="273.2" y="554" class="tick" text-anchor="middle">-8 pp</text><line x1="441.6" y1="536" x2="441.6" y2="541" class="axis"/><text x="441.6" y="554" class="tick" text-anchor="middle">-4 pp</text><line x1="610.0" y1="536" x2="610.0" y2="541" class="axis"/><text x="610.0" y="554" class="tick" text-anchor="middle">+0 pp</text><line x1="778.4" y1="536" x2="778.4" y2="541" class="axis"/><text x="778.4" y="554" class="tick" text-anchor="middle">+4 pp</text><line x1="946.8" y1="536" x2="946.8" y2="541" class="axis"/><text x="946.8" y="554" class="tick" text-anchor="middle">+8 pp</text><text x="0" y="590" class="facet">tu cesta sin NVDA</text><text x="1010" y="590" class="facet-meta" text-anchor="end">2006–2026 · 245 meses</text><rect x="538.4" y="602" width="134.7" height="208" class="band"/><line x1="610.0" y1="602" x2="610.0" y2="810" class="zero"/><text x="196" y="619.0" class="rowlab" text-anchor="end">trend_gap</text><line x1="610.0" y1="615.0" x2="487.9" y2="615.0" class="stem"/><circle cx="487.9" cy="615.0" r="5.5" class="dot-neg" data-tip="trend_gap · tu cesta sin NVDA: -2.9 pp frente al equiponderado"/><text x="477.9" y="619.0" class="val" text-anchor="end">-2.9</text><text x="196" y="645.0" class="rowlab" text-anchor="end">trend_gap_filtrado</text><line x1="610.0" y1="641.0" x2="534.2" y2="641.0" class="stem"/><circle cx="534.2" cy="641.0" r="5.5" class="dot-neg" data-tip="trend_gap_filtrado · tu cesta sin NVDA: -1.8 pp frente al equiponderado"/><text x="524.2" y="645.0" class="val" text-anchor="end">-1.8</text><text x="196" y="671.0" class="rowlab" text-anchor="end">el más caído</text><line x1="610.0" y1="667.0" x2="273.2" y2="667.0" class="stem"/><circle cx="273.2" cy="667.0" r="5.5" class="dot-neg" data-tip="el más caído · tu cesta sin NVDA: -8.0 pp frente al equiponderado"/><text x="263.2" y="671.0" class="val" text-anchor="end">-8.0</text><text x="196" y="697.0" class="rowlab" text-anchor="end">reversión 1 mes</text><line x1="610.0" y1="693.0" x2="538.4" y2="693.0" class="stem"/><circle cx="538.4" cy="693.0" r="5.5" class="dot-null" data-tip="reversión 1 mes · tu cesta sin NVDA: -1.7 pp frente al equiponderado — dentro de la banda del azar"/><text x="528.4" y="697.0" class="val" text-anchor="end">-1.7</text><text x="196" y="723.0" class="rowlab" text-anchor="end">momentum 12-1</text><line x1="610.0" y1="719.0" x2="774.2" y2="719.0" class="stem"/><circle cx="774.2" cy="719.0" r="5.5" class="dot-pos" data-tip="momentum 12-1 · tu cesta sin NVDA: +3.9 pp frente al equiponderado"/><text x="784.2" y="723.0" class="val" text-anchor="start">+3.9</text><text x="196" y="749.0" class="rowlab" text-anchor="end">value 5 años</text><line x1="610.0" y1="745.0" x2="513.2" y2="745.0" class="stem"/><circle cx="513.2" cy="745.0" r="5.5" class="dot-neg" data-tip="value 5 años · tu cesta sin NVDA: -2.3 pp frente al equiponderado"/><text x="503.2" y="749.0" class="val" text-anchor="end">-2.3</text><text x="196" y="775.0" class="rowlab" text-anchor="end">ML Ridge</text><line x1="610.0" y1="771.0" x2="694.2" y2="771.0" class="stem"/><circle cx="694.2" cy="771.0" r="5.5" class="dot-pos" data-tip="ML Ridge · tu cesta sin NVDA: +2.0 pp frente al equiponderado"/><text x="704.2" y="775.0" class="val" text-anchor="start">+2.0</text><text x="196" y="801.0" class="rowlab" text-anchor="end">ML GBM</text><line x1="610.0" y1="797.0" x2="664.7" y2="797.0" class="stem"/><circle cx="664.7" cy="797.0" r="5.5" class="dot-null" data-tip="ML GBM · tu cesta sin NVDA: +1.3 pp frente al equiponderado — dentro de la banda del azar"/><text x="674.7" y="801.0" class="val" text-anchor="start">+1.3</text><line x1="210" y1="816" x2="1010" y2="816" class="axis"/><line x1="273.2" y1="816" x2="273.2" y2="821" class="axis"/><text x="273.2" y="834" class="tick" text-anchor="middle">-8 pp</text><line x1="441.6" y1="816" x2="441.6" y2="821" class="axis"/><text x="441.6" y="834" class="tick" text-anchor="middle">-4 pp</text><line x1="610.0" y1="816" x2="610.0" y2="821" class="axis"/><text x="610.0" y="834" class="tick" text-anchor="middle">+0 pp</text><line x1="778.4" y1="816" x2="778.4" y2="821" class="axis"/><text x="778.4" y="834" class="tick" text-anchor="middle">+4 pp</text><line x1="946.8" y1="816" x2="946.8" y2="821" class="axis"/><text x="946.8" y="834" class="tick" text-anchor="middle">+8 pp</text><text x="0" y="870" class="facet">amplio, 15 activos</text><text x="1010" y="870" class="facet-meta" text-anchor="end">2004–2026 · 262 meses</text><rect x="555.3" y="882" width="96.8" height="208" class="band"/><line x1="610.0" y1="882" x2="610.0" y2="1090" class="zero"/><text x="196" y="899.0" class="rowlab" text-anchor="end">trend_gap</text><line x1="610.0" y1="895.0" x2="542.6" y2="895.0" class="stem"/><circle cx="542.6" cy="895.0" r="5.5" class="dot-neg" data-tip="trend_gap · amplio, 15 activos: -1.6 pp frente al equiponderado"/><text x="532.6" y="899.0" class="val" text-anchor="end">-1.6</text><text x="196" y="925.0" class="rowlab" text-anchor="end">trend_gap_filtrado</text><line x1="610.0" y1="921.0" x2="534.2" y2="921.0" class="stem"/><circle cx="534.2" cy="921.0" r="5.5" class="dot-neg" data-tip="trend_gap_filtrado · amplio, 15 activos: -1.8 pp frente al equiponderado"/><text x="524.2" y="925.0" class="val" text-anchor="end">-1.8</text><text x="196" y="951.0" class="rowlab" text-anchor="end">el más caído</text><line x1="610.0" y1="947.0" x2="365.8" y2="947.0" class="stem"/><circle cx="365.8" cy="947.0" r="5.5" class="dot-neg" data-tip="el más caído · amplio, 15 activos: -5.8 pp frente al equiponderado"/><text x="355.8" y="951.0" class="val" text-anchor="end">-5.8</text><text x="196" y="977.0" class="rowlab" text-anchor="end">reversión 1 mes</text><line x1="610.0" y1="973.0" x2="563.7" y2="973.0" class="stem"/><circle cx="563.7" cy="973.0" r="5.5" class="dot-null" data-tip="reversión 1 mes · amplio, 15 activos: -1.1 pp frente al equiponderado — dentro de la banda del azar"/><text x="553.7" y="977.0" class="val" text-anchor="end">-1.1</text><text x="196" y="1003.0" class="rowlab" text-anchor="end">momentum 12-1</text><line x1="610.0" y1="999.0" x2="614.2" y2="999.0" class="stem"/><circle cx="614.2" cy="999.0" r="5.5" class="dot-null" data-tip="momentum 12-1 · amplio, 15 activos: +0.1 pp frente al equiponderado — dentro de la banda del azar"/><text x="624.2" y="1003.0" class="val" text-anchor="start">+0.1</text><text x="196" y="1029.0" class="rowlab" text-anchor="end">value 5 años</text><line x1="610.0" y1="1025.0" x2="534.2" y2="1025.0" class="stem"/><circle cx="534.2" cy="1025.0" r="5.5" class="dot-neg" data-tip="value 5 años · amplio, 15 activos: -1.8 pp frente al equiponderado"/><text x="524.2" y="1029.0" class="val" text-anchor="end">-1.8</text><text x="196" y="1055.0" class="rowlab" text-anchor="end">ML Ridge</text><line x1="610.0" y1="1051.0" x2="534.2" y2="1051.0" class="stem"/><circle cx="534.2" cy="1051.0" r="5.5" class="dot-neg" data-tip="ML Ridge · amplio, 15 activos: -1.8 pp frente al equiponderado"/><text x="524.2" y="1055.0" class="val" text-anchor="end">-1.8</text><text x="196" y="1081.0" class="rowlab" text-anchor="end">ML GBM</text><line x1="610.0" y1="1077.0" x2="597.4" y2="1077.0" class="stem"/><circle cx="597.4" cy="1077.0" r="5.5" class="dot-null" data-tip="ML GBM · amplio, 15 activos: -0.3 pp frente al equiponderado — dentro de la banda del azar"/><text x="587.4" y="1081.0" class="val" text-anchor="end">-0.3</text><line x1="210" y1="1096" x2="1010" y2="1096" class="axis"/><line x1="273.2" y1="1096" x2="273.2" y2="1101" class="axis"/><text x="273.2" y="1114" class="tick" text-anchor="middle">-8 pp</text><line x1="441.6" y1="1096" x2="441.6" y2="1101" class="axis"/><text x="441.6" y="1114" class="tick" text-anchor="middle">-4 pp</text><line x1="610.0" y1="1096" x2="610.0" y2="1101" class="axis"/><text x="610.0" y="1114" class="tick" text-anchor="middle">+0 pp</text><line x1="778.4" y1="1096" x2="778.4" y2="1101" class="axis"/><text x="778.4" y="1114" class="tick" text-anchor="middle">+4 pp</text><line x1="946.8" y1="1096" x2="946.8" y2="1101" class="axis"/><text x="946.8" y="1114" class="tick" text-anchor="middle">+8 pp</text></svg>
+<div class="legend"><span><i class="sw band"></i>banda del azar (percentiles 5–95 de 200 sorteos)</span><span><i class="sw" style="background:var(--null)"></i>dentro del azar</span><span><i class="sw" style="background:var(--neg)"></i>peor que el equiponderado</span><span><i class="sw" style="background:var(--pos)"></i>mejor que el equiponderado</span></div>
+<figcaption>Cada punto es una señal en un universo. La banda gris es lo que consigue
+elegir al azar. <b>Casi todo cae dentro.</b> Lo que sobresale por arriba es el momentum
+en tu cesta original, y es un espejismo: esa señal elige NVDA en 70 de los 84 meses con
+señal, y NVDA está en la cesta porque hoy sabemos que multiplicó por 143. Quítala y el
++24,5 se queda en +3,9.</figcaption></figure>
+
+<figure><svg viewBox="0 0 1040 250" width="100%" role="img" aria-label="Percentil en que acaba la estrategia entre los DCA individuales" class="chart"><rect x="526.0" y="26" width="158.0" height="184" class="band"/><line x1="605.0" y1="26" x2="605.0" y2="210" class="zero"/><text x="605.0" y="18" class="tick" text-anchor="middle">mediana</text><text x="196" y="53.0" class="rowlab" text-anchor="end">10 sectores + SPY</text><line x1="210" y1="49.0" x2="1000" y2="49.0" class="track"/><circle cx="608.2" cy="49.0" r="7" class="dot-null" data-tip="elección aleatoria: percentil 50.4"/><circle cx="612.9" cy="49.0" r="5" class="dot-neg" data-tip="comprar el más barato: percentil 51.0"/><text x="196" y="99.0" class="rowlab" text-anchor="end">tu cesta (con NVDA)</text><line x1="210" y1="95.0" x2="1000" y2="95.0" class="track"/><circle cx="676.1" cy="95.0" r="7" class="dot-null" data-tip="elección aleatoria: percentil 59.0"/><circle cx="651.6" cy="95.0" r="5" class="dot-neg" data-tip="comprar el más barato: percentil 55.9"/><text x="196" y="145.0" class="rowlab" text-anchor="end">tu cesta sin NVDA</text><line x1="210" y1="141.0" x2="1000" y2="141.0" class="track"/><circle cx="616.1" cy="141.0" r="7" class="dot-null" data-tip="elección aleatoria: percentil 51.4"/><circle cx="609.0" cy="141.0" r="5" class="dot-neg" data-tip="comprar el más barato: percentil 50.5"/><text x="196" y="191.0" class="rowlab" text-anchor="end">amplio, 15 activos</text><line x1="210" y1="187.0" x2="1000" y2="187.0" class="track"/><circle cx="597.1" cy="187.0" r="7" class="dot-null" data-tip="elección aleatoria: percentil 49.0"/><circle cx="593.1" cy="187.0" r="5" class="dot-neg" data-tip="comprar el más barato: percentil 48.5"/><line x1="210" y1="218" x2="1000" y2="218" class="axis"/><line x1="210.0" y1="218" x2="210.0" y2="223" class="axis"/><text x="210.0" y="236" class="tick" text-anchor="middle">0</text><line x1="407.5" y1="218" x2="407.5" y2="223" class="axis"/><text x="407.5" y="236" class="tick" text-anchor="middle">25</text><line x1="605.0" y1="218" x2="605.0" y2="223" class="axis"/><text x="605.0" y="236" class="tick" text-anchor="middle">50</text><line x1="802.5" y1="218" x2="802.5" y2="223" class="axis"/><text x="802.5" y="236" class="tick" text-anchor="middle">75</text><line x1="1000.0" y1="218" x2="1000.0" y2="223" class="axis"/><text x="1000.0" y="236" class="tick" text-anchor="middle">100</text><text x="210" y="242" class="tick">0 = el peor activo · 100 = el mejor</text></svg>
+<div class="legend"><span><i class="sw " style="background:var(--neg)"></i>comprar el más barato</span><span><i class="sw " style="background:var(--null)"></i>elegir al azar</span></div>
+<figcaption>Dónde acaba colocada la inversión entre los activos disponibles. Los dos
+puntos se solapan en los cuatro universos: <b>elegir el más barato deja el dinero
+exactamente donde lo deja un dado</b>.</figcaption></figure>
+
+<h3>El test que sí tiene potencia</h3>
+<p>Las ventanas solapadas ilustran magnitudes, pero 300 ventanas que se pisan mes a
+mes no son 300 datos independientes: son unos 12. El test correcto mide la selección
+mes a mes — retorno del activo elegido menos la media del universo.</p>
+
+<figure><svg viewBox="0 0 1040 370" width="100%" role="img" aria-label="Estadístico t del edge de selección" class="chart"><rect x="266.6" y="40" width="706.9" height="300" class="band"/><line x1="266.6" y1="40" x2="266.6" y2="340" class="thresh"/><text x="266.6" y="32" class="tick" text-anchor="middle">−2,9</text><line x1="973.4" y1="40" x2="973.4" y2="340" class="thresh"/><text x="973.4" y="32" class="tick" text-anchor="middle">+2,9</text><text x="620.0" y="16" class="tick" text-anchor="middle">zona sin significancia (corregida por probar 10 señales)</text><line x1="620.0" y1="40" x2="620.0" y2="340" class="zero"/><text x="216" y="59.0" class="rowlab" text-anchor="end">trend_gap</text><circle cx="545.7" cy="55.0" r="4.5" class="dot-null" data-tip="trend_gap · 10 sectores + SPY: t = -0.61"/><circle cx="477.4" cy="55.0" r="6.0" class="dot-neg" data-tip="trend_gap · tu cesta sin NVDA: t = -1.17"/><text x="216" y="89.0" class="rowlab" text-anchor="end">trend_gap en alcista</text><circle cx="534.7" cy="85.0" r="4.5" class="dot-null" data-tip="trend_gap en alcista · 10 sectores + SPY: t = -0.70"/><circle cx="412.8" cy="85.0" r="6.0" class="dot-neg" data-tip="trend_gap en alcista · tu cesta sin NVDA: t = -1.70"/><text x="216" y="119.0" class="rowlab" text-anchor="end">trend_gap filtrado</text><circle cx="523.7" cy="115.0" r="4.5" class="dot-null" data-tip="trend_gap filtrado · 10 sectores + SPY: t = -0.79"/><circle cx="414.0" cy="115.0" r="6.0" class="dot-neg" data-tip="trend_gap filtrado · tu cesta sin NVDA: t = -1.69"/><text x="216" y="149.0" class="rowlab" text-anchor="end">el más caído</text><circle cx="482.3" cy="145.0" r="4.5" class="dot-null" data-tip="el más caído · 10 sectores + SPY: t = -1.13"/><circle cx="412.8" cy="145.0" r="6.0" class="dot-neg" data-tip="el más caído · tu cesta sin NVDA: t = -1.70"/><text x="216" y="179.0" class="rowlab" text-anchor="end">el más caído en alcista</text><circle cx="533.5" cy="175.0" r="4.5" class="dot-null" data-tip="el más caído en alcista · 10 sectores + SPY: t = -0.71"/><circle cx="364.1" cy="175.0" r="6.0" class="dot-neg" data-tip="el más caído en alcista · tu cesta sin NVDA: t = -2.10"/><text x="216" y="209.0" class="rowlab" text-anchor="end">value 5 años</text><circle cx="546.9" cy="205.0" r="4.5" class="dot-null" data-tip="value 5 años · 10 sectores + SPY: t = -0.60"/><circle cx="640.7" cy="205.0" r="6.0" class="dot-pos" data-tip="value 5 años · tu cesta sin NVDA: t = +0.17"/><text x="216" y="239.0" class="rowlab" text-anchor="end">momentum 12-1</text><circle cx="660.2" cy="235.0" r="4.5" class="dot-null" data-tip="momentum 12-1 · 10 sectores + SPY: t = +0.33"/><circle cx="707.8" cy="235.0" r="6.0" class="dot-pos" data-tip="momentum 12-1 · tu cesta sin NVDA: t = +0.72"/><text x="216" y="269.0" class="rowlab" text-anchor="end">combo mom+value</text><circle cx="683.4" cy="265.0" r="4.5" class="dot-null" data-tip="combo mom+value · 10 sectores + SPY: t = +0.52"/><circle cx="765.0" cy="265.0" r="6.0" class="dot-pos" data-tip="combo mom+value · tu cesta sin NVDA: t = +1.19"/><text x="216" y="299.0" class="rowlab" text-anchor="end">ML Ridge</text><circle cx="557.8" cy="295.0" r="4.5" class="dot-null" data-tip="ML Ridge · 10 sectores + SPY: t = -0.51"/><circle cx="464.0" cy="295.0" r="6.0" class="dot-neg" data-tip="ML Ridge · tu cesta sin NVDA: t = -1.28"/><text x="216" y="329.0" class="rowlab" text-anchor="end">ML GBM</text><circle cx="505.4" cy="325.0" r="4.5" class="dot-null" data-tip="ML GBM · 10 sectores + SPY: t = -0.94"/><circle cx="613.9" cy="325.0" r="6.0" class="dot-neg" data-tip="ML GBM · tu cesta sin NVDA: t = -0.05"/><line x1="230" y1="346" x2="1010" y2="346" class="axis"/><line x1="254.4" y1="346" x2="254.4" y2="351" class="axis"/><text x="254.4" y="364" class="tick" text-anchor="middle">-3</text><line x1="376.2" y1="346" x2="376.2" y2="351" class="axis"/><text x="376.2" y="364" class="tick" text-anchor="middle">-2</text><line x1="498.1" y1="346" x2="498.1" y2="351" class="axis"/><text x="498.1" y="364" class="tick" text-anchor="middle">-1</text><line x1="620.0" y1="346" x2="620.0" y2="351" class="axis"/><text x="620.0" y="364" class="tick" text-anchor="middle">+0</text><line x1="741.9" y1="346" x2="741.9" y2="351" class="axis"/><text x="741.9" y="364" class="tick" text-anchor="middle">+1</text><line x1="863.8" y1="346" x2="863.8" y2="351" class="axis"/><text x="863.8" y="364" class="tick" text-anchor="middle">+2</text><line x1="985.6" y1="346" x2="985.6" y2="351" class="axis"/><text x="985.6" y="364" class="tick" text-anchor="middle">+3</text></svg>
+<div class="legend"><span><i class="sw " style="background:var(--neg)"></i>tu cesta sin NVDA</span><span><i class="sw " style="background:var(--null)"></i>10 sectores + SPY</span></div>
+<figcaption>Estadístico t con errores Newey-West. <b>Ninguna señal sale de la zona
+sin significancia.</b> Lo informativo no es eso, sino el signo: todas las variantes de
+“comprar barato” son negativas en los dos universos. La señal informa — informa al revés.</figcaption></figure>
+
+<hr>
+
+<h2>3 · El horizonte que de verdad cobras</h2>
+<p class="dek">Un DCA no vende: el dinero que entra en el mes <i>t</i> se queda años.
+Medir la señal contra el retorno del mes siguiente evalúa algo que la estrategia no
+cobra. Repetido a 12, 36 y 60 meses, el cuadro se agrava.</p>
+
+<div class="tw"><table><thead><tr><th>señal</th><th>1 mes</th><th>12 meses</th><th>36 meses</th><th>60 meses</th></tr></thead><tbody><tr><td class="">comprar el más caído</td><td class=""><span style="color:var(--neg)">−0,64 %</span></td><td class=""><span style="color:var(--neg)">−6,1 %</span></td><td class=""><span style="color:var(--neg)">−27,5 % (t=−2,80)</span></td><td class=""><span style="color:var(--neg)">−53,2 % (t=−2,65)</span></td></tr><tr><td class="">value 5 años</td><td class="">+0,06 %</td><td class="">−2,8 %</td><td class="">−13,4 %</td><td class="">−28,4 %</td></tr><tr><td class="">momentum 12-1</td><td class="">+0,27 %</td><td class="">+3,8 %</td><td class="">+19,6 %</td><td class="">+34,0 %</td></tr><tr><td class="">comprar el más caído · <b>sectores</b></td><td class="">−0,33 %</td><td class="">−1,8 %</td><td class="">−4,7 %</td><td class="">−13,1 %</td></tr><tr><td class="">momentum 12-1 · <b>sectores</b></td><td class="">+0,08 %</td><td class="">+0,7 %</td><td class="">+3,1 %</td><td class="">−0,7 %</td></tr></tbody></table></div>
+
+<p>En tu cesta, comprar el activo más caído y mantenerlo tres años deja
+<b>27 puntos por detrás</b> de la media del universo, y cinco años, <b>53</b>. Es el único
+resultado del estudio que roza la significancia, y va justo en contra de la idea.
+En el universo de sectores —el menos contaminado por haber elegido ganadores— todo
+vuelve a cero: ahí la señal ni ayuda ni perjudica.</p>
+
+<hr>
+
+<h2>4 · Lo que dice la literatura</h2>
+<p class="dek">Antes de seguir probando conviene saber en qué dirección apunta lo publicado.
+Resumen de la búsqueda, con las cifras de los papers originales.</p>
+
+<blockquote>El efecto contrario documentado por Tetlock (2007) es de <b>−8,1 puntos básicos</b>
+al día siguiente, revierte <b>+6,8</b> durante el resto de la semana, y la suma de los cinco
+días <b>no es significativa</b>. Es a nivel de mercado y a horizonte de días.</blockquote>
+
+<ul>
+<li><b>El sentimiento de noticias, en transversal, es momentum, no reversión.</b>
+Tetlock, Saar-Tsechansky y Macskassy (2008) encuentran infrarreacción: quedan 7,5 pb de
+deriva sin incorporar. La estrategia rinde un 21 % anual bruto y <b>deja de ser rentable con
+10 pb de costes</b>.</li>
+<li><b>Las malas noticias tienen reacción retardada larga</b> (Heston y Sinha, 2017): el activo
+peor tratado sigue cayendo durante meses. Evidencia directa contra la idea contraria.</li>
+<li><b>Momentum en ETFs sectoriales: no se replica</b> fuera de muestra
+(<i>Journal of Asset Management</i>, 2014). Nueve de tus quince activos son sectoriales.</li>
+<li><b>Momentum temporal: replicación fallida.</b> Huang, Li, Wang y Zhou (2020) concluyen que
+el t-stat agregado no supera los valores críticos de bootstrap.</li>
+<li><b>1/N es durísimo de batir.</b> DeMiguel, Garlappi y Uppal (2009): de 14 modelos de
+optimización, ninguno bate consistentemente al equiponderado; harían falta <b>~3.000 meses</b>
+de historia con 25 activos.</li>
+</ul>
+
+<div class="callout">
+<h3>Tu cesta tiene ~3 apuestas independientes, no 15</h3>
+<p>SPY, QQQ, IWM, XLK, XLY, XLI, XLF, NVDA y MSFT son todos beta de bolsa
+estadounidense, con correlaciones de 0,8 a 0,95. Las apuestas realmente independientes
+son tres: bolsa USA, metales preciosos y defensivas. La ley fundamental de la gestión
+activa dice que el ratio de información escala con la raíz del número de apuestas
+<i>independientes</i>.</p>
+</div>
+
+<hr>
+
+<h2>5 · El aprendizaje automático</h2>
+<p class="dek">Ridge y gradient boosting sobre 8 features en rango transversal, objetivo
+desmediado, walk-forward con embargo de un mes y reentreno anual. Su mejor escenario:
+universo ancho y 22 años.</p>
+
+<div class="tw"><table><thead><tr><th>modelo · universo</th><th>observaciones</th><th>R² dentro de muestra</th><th>edge fuera de muestra</th><th>t</th></tr></thead><tbody><tr><td class="">Ridge · sectores</td><td class=""><span class="k">2.960</span></td><td class="">0,004</td><td class=""><span style="color:var(--neg)">-0,12 %</span></td><td class="">-0,51</td></tr><tr><td class="">GBM · sectores</td><td class=""><span class="k">2.960</span></td><td class="">0,108</td><td class=""><span style="color:var(--neg)">-0,22 %</span></td><td class="">-0,94</td></tr><tr><td class="">Ridge · amplio</td><td class=""><span class="k">3.375</span></td><td class="">0,004</td><td class=""><span style="color:var(--neg)">-0,41 %</span></td><td class="">-1,34</td></tr><tr><td class="">GBM · amplio</td><td class=""><span class="k">3.375</span></td><td class="">0,108</td><td class=""><span style="color:var(--neg)">-0,68 %</span></td><td class="">-2,46</td></tr><tr><td class="">Ridge · cesta sin NVDA</td><td class=""><span class="k">1.248</span></td><td class="">0,009</td><td class=""><span style="color:var(--neg)">-0,36 %</span></td><td class="">-1,28</td></tr><tr><td class="">GBM · cesta sin NVDA</td><td class=""><span class="k">1.248</span></td><td class="">0,174</td><td class=""><span style="color:var(--neg)">-0,02 %</span></td><td class="">-0,05</td></tr></tbody></table></div>
+
+<figure><svg viewBox="0 0 1040 264" width="100%" role="img" aria-label="R² dentro de muestra frente a edge fuera de muestra" class="chart"><text x="240" y="26" class="tick">R² DENTRO de muestra</text><text x="618.8" y="26" class="tick">edge FUERA de muestra (%/mes)</text><text x="216" y="61.0" class="rowlab" text-anchor="end">Ridge · sectores</text><rect x="230" y="49.0" width="6.6" height="16" rx="4" class="bar-null" data-tip="Ridge · sectores: R² dentro de muestra 0.004 con 2,960 observaciones"/><text x="244.6" y="61.0" class="val">0.004</text><line x1="895.6" y1="47.0" x2="895.6" y2="67.0" class="zero"/><rect x="849.9" y="49.0" width="45.7" height="16" rx="4" class="bar-neg" data-tip="edge fuera de muestra -0.12%/mes (t = -0.51)"/><text x="841.9" y="61.0" class="val" text-anchor="end">-0.12 (t=-0.51)</text><text x="216" y="95.0" class="rowlab" text-anchor="end">GBM · sectores</text><rect x="230" y="83.0" width="177.6" height="16" rx="4" class="bar-ceil" data-tip="GBM · sectores: R² dentro de muestra 0.108 con 2,960 observaciones"/><text x="415.6" y="95.0" class="val">0.108</text><line x1="895.6" y1="81.0" x2="895.6" y2="101.0" class="zero"/><rect x="811.8" y="83.0" width="83.9" height="16" rx="4" class="bar-neg" data-tip="edge fuera de muestra -0.22%/mes (t = -0.94)"/><text x="803.8" y="95.0" class="val" text-anchor="end">-0.22 (t=-0.94)</text><text x="216" y="129.0" class="rowlab" text-anchor="end">Ridge · amplio</text><rect x="230" y="117.0" width="6.6" height="16" rx="4" class="bar-null" data-tip="Ridge · amplio: R² dentro de muestra 0.004 con 3,375 observaciones"/><text x="244.6" y="129.0" class="val">0.004</text><line x1="895.6" y1="115.0" x2="895.6" y2="135.0" class="zero"/><rect x="739.3" y="117.0" width="156.3" height="16" rx="4" class="bar-neg" data-tip="edge fuera de muestra -0.41%/mes (t = -1.34)"/><text x="731.3" y="129.0" class="val" text-anchor="end">-0.41 (t=-1.34)</text><text x="216" y="163.0" class="rowlab" text-anchor="end">GBM · amplio</text><rect x="230" y="151.0" width="177.6" height="16" rx="4" class="bar-ceil" data-tip="GBM · amplio: R² dentro de muestra 0.108 con 3,375 observaciones"/><text x="415.6" y="163.0" class="val">0.108</text><line x1="895.6" y1="149.0" x2="895.6" y2="169.0" class="zero"/><rect x="636.4" y="151.0" width="259.2" height="16" rx="4" class="bar-neg" data-tip="edge fuera de muestra -0.68%/mes (t = -2.46)"/><text x="628.4" y="163.0" class="val" text-anchor="end">-0.68 (t=-2.46)</text><text x="216" y="197.0" class="rowlab" text-anchor="end">Ridge · cesta sin NVDA</text><rect x="230" y="185.0" width="14.8" height="16" rx="4" class="bar-null" data-tip="Ridge · cesta sin NVDA: R² dentro de muestra 0.009 con 1,248 observaciones"/><text x="252.8" y="197.0" class="val">0.009</text><line x1="895.6" y1="183.0" x2="895.6" y2="203.0" class="zero"/><rect x="758.4" y="185.0" width="137.2" height="16" rx="4" class="bar-neg" data-tip="edge fuera de muestra -0.36%/mes (t = -1.28)"/><text x="750.4" y="197.0" class="val" text-anchor="end">-0.36 (t=-1.28)</text><text x="216" y="231.0" class="rowlab" text-anchor="end">GBM · cesta sin NVDA</text><rect x="230" y="219.0" width="286.1" height="16" rx="4" class="bar-ceil" data-tip="GBM · cesta sin NVDA: R² dentro de muestra 0.174 con 1,248 observaciones"/><text x="524.1" y="231.0" class="val">0.174</text><line x1="895.6" y1="217.0" x2="895.6" y2="237.0" class="zero"/><rect x="888.0" y="219.0" width="7.6" height="16" rx="4" class="bar-neg" data-tip="edge fuera de muestra -0.02%/mes (t = -0.05)"/><text x="880.0" y="231.0" class="val" text-anchor="end">-0.02 (t=-0.05)</text></svg>
+<figcaption>El GBM explica hasta el <b>17 %</b> de la varianza dentro de muestra y transporta
+cero —o menos— fuera. Es memorización de ruido. Y hay un techo estructural: quince activos
+dan quince opciones al mes; los trabajos de ML transversal que funcionan operan sobre
+miles.</figcaption></figure>
+
+<hr>
+
+<h2>6 · Lo único que sí aparece</h2>
+<p class="dek">Repartir la aportación inversamente a la volatilidad no es una señal de
+selección: no predice nada, sólo dosifica. No sube el retorno, pero baja la dispersión
+de resultados de forma consistente en los tres universos.</p>
+
+<div class="tw"><table><thead><tr><th>reparto</th><th>ret. sectores</th><th>ret. sin NVDA</th><th>ret. amplio</th><th>disp. sectores</th><th>disp. sin NVDA</th><th>disp. amplio</th></tr></thead><tbody><tr><td class="">equiponderado</td><td class="">10,4 %</td><td class="">14,8 %</td><td class="">11,5 %</td><td class="">12,2</td><td class="">13,8</td><td class="">10,4</td></tr><tr><td class="">volatilidad inversa</td><td class="">9,9 %</td><td class="">15,0 %</td><td class="">11,2 %</td><td class="">11,7</td><td class="">13,2</td><td class="">10,0</td></tr></tbody></table></div>
+
+<div class="callout ok">
+<h3>Mismo retorno, menos varianza</h3>
+<p>Es exactamente lo que predice la literatura: la ponderación por volatilidad inversa
+mejora la relación rentabilidad/riesgo con muy poco error de estimación, porque sólo
+estima segundos momentos. No es alfa, pero es replicable — y es lo contrario de lo que
+pasa con las señales de selección.</p>
+</div>
+
+
+
+<hr>
+
+<h2>Cómo leer todo esto</h2>
+<p>“No hay señal” y “no se puede detectar señal” no son lo mismo, y aquí aplica lo segundo.
+Con ~250 meses y un tracking error mensual del 3 %, para dar por bueno un edge real de
+0,30 % al mes con t = 2 harían falta unos <b>400 meses</b>, 33 años. El momentum con
+t = 0,72 es perfectamente compatible con un edge real de +0,27 % mensual: no está
+refutado, está <b>sin resolver</b>, y no se resolverá con estos datos.</p>
+
+<p>Lo que sí está establecido, porque el signo se repite en todos los universos y
+horizontes, es que <b>la dirección de “comprar lo más caído” no ayuda</b>, y en la cesta
+concreta perjudica. Parte de ese signo negativo no mide el fracaso del value: mide que la
+cesta se eligió mirando hacia atrás, con NVDA y MSFT dentro porque ya sabemos que ganaron.</p>
+
+<h3>Limitaciones</h3>
+<ul>
+<li>Cesta con sesgo de supervivencia. Cuantificado, no eliminado.</li>
+<li>Sin comisiones, spreads ni fiscalidad. La estrategia de selección rota y el
+equiponderado no: en real quedaría aún peor.</li>
+<li>Una sola realización histórica, aunque incluya puntocom, 2008, covid y 2022.</li>
+<li>Las ventanas solapadas no son observaciones independientes; las conclusiones se
+apoyan en los tests mes a mes.</li>
+</ul>
+
+<footer>
+Datos: precios diarios ajustados por dividendos (Yahoo Finance), agregados a mensual ·
+20 activos · 1993–2026. Sentimiento de noticias: GDELT DOC 2.0, tono medio de la
+cobertura, desde 2017. Todo el código y los tests están en el repositorio; cada cifra
+de esta página se reproduce con <code>python -m backtest.run_robustness --all</code>.
+</footer>
+
+</div>
+<script>
+(function(){
+  var tip=document.getElementById('tip');
+  document.addEventListener('mouseover',function(e){
+    var t=e.target.closest('[data-tip]'); if(!t)return;
+    tip.textContent=t.getAttribute('data-tip'); tip.style.opacity='1';
+  });
+  document.addEventListener('mousemove',function(e){
+    if(tip.style.opacity!=='1')return;
+    var x=e.clientX+14,y=e.clientY+16;
+    if(x+tip.offsetWidth>innerWidth-10)x=e.clientX-tip.offsetWidth-14;
+    if(y+tip.offsetHeight>innerHeight-10)y=e.clientY-tip.offsetHeight-14;
+    tip.style.left=x+'px'; tip.style.top=y+'px';
+  });
+  document.addEventListener('mouseout',function(e){
+    if(e.target.closest('[data-tip]'))tip.style.opacity='0';
+  });
+})();
+</script>
