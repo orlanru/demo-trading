@@ -1,31 +1,17 @@
 import numpy as np
 import pandas as pd
-import streamlit as st
 
 from services.market_data import get_daily_history
 
 
-def get_features_complete(ticker: str, features_list: list[str], n_months: int = 3):
+def build_monthly_features(dfd: pd.DataFrame) -> pd.DataFrame:
     """
-    Genera features mensuales y devuelve 'ventanas' para predecir:
-      - mes calendario actual
-      - mes -1
-      - mes -2
-    usando como input siempre el último mes CERRADO previo a cada mes objetivo.
+    Construye el DataFrame de features mensuales a partir de OHLC diario.
 
-    Devuelve:
-      (windows, df_daily)
-    donde windows es list[dict]:
-      {
-        "label": "YYYY-MM",
-        "x_input": X_final (1 row),
-        "prev_close": float,
-        "month_start": Timestamp,
-        "month_end": Timestamp
-      }
+    Función pura (sin red ni Streamlit) para que el backtest use exactamente
+    las mismas features que la app.
     """
-    start_date = "2015-01-01" if "BTC" in ticker else "2000-01-01"
-    dfd = get_daily_history(ticker, start_date=start_date)
+    dfd = dfd.copy()
 
     # Features mensuales base
     m = pd.DataFrame(index=dfd["Close"].resample("ME").last().index)
@@ -75,6 +61,32 @@ def get_features_complete(ticker: str, features_list: list[str], n_months: int =
     m["Mes_sin"] = np.sin(2 * np.pi * m["Mes"] / 12)
     m["Mes_cos"] = np.cos(2 * np.pi * m["Mes"] / 12)
 
+    return m
+
+
+def get_features_complete(ticker: str, features_list: list[str], n_months: int = 3):
+    """
+    Genera features mensuales y devuelve 'ventanas' para predecir:
+      - mes calendario actual
+      - mes -1
+      - mes -2
+    usando como input siempre el último mes CERRADO previo a cada mes objetivo.
+
+    Devuelve:
+      (windows, df_daily)
+    donde windows es list[dict]:
+      {
+        "label": "YYYY-MM",
+        "x_input": X_final (1 row),
+        "prev_close": float,
+        "month_start": Timestamp,
+        "month_end": Timestamp
+      }
+    """
+    start_date = "2015-01-01" if "BTC" in ticker else "2000-01-01"
+    dfd = get_daily_history(ticker, start_date=start_date)
+
+    m = build_monthly_features(dfd)
     m_clean = m.dropna()
     if m_clean.empty or len(m_clean.index) < (n_months + 3):
         return None, dfd
@@ -103,6 +115,8 @@ def get_features_complete(ticker: str, features_list: list[str], n_months: int =
         try:
             X_final = m_clean.loc[[feat_end], features_list]
         except KeyError as e:
+            import streamlit as st
+
             st.error(f"Error de columnas: {e}. El modelo pide columnas que no se generaron.")
             return None, dfd
 
